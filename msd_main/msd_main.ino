@@ -1,5 +1,8 @@
 #include <math.h>
 
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+
 // Ultrasonic sensor pins
 const int trigPin = 9;
 const int echoPin = 10;
@@ -19,7 +22,14 @@ unsigned long currentTime;
 double armHeight = 0;
 double initDist = 0;
 
+// Initialize Accelerometer Sensor Object
+Adafruit_MPU6050 mpu;
+Adafruit_Sensor *accelerometer = mpu.getAccelerometerSensor();
+
 void setup() {
+  // Setup for accelerometer
+  mpu.setAccelerometerRange(MPU6050_RANGE_4_G); // set accelerometer range to +- 4G
+
   // Setup for ultrasonic sensor
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT);  // Sets the echoPin as an Input
@@ -46,12 +56,18 @@ void loop() {
   // Calculate arm height and update position using the rotary encoder
   calculateArmHeight();
 
-  // Print results in CSV format: time (ms), distance (cm), arm height
-  Serial.print(currentTime / 1e6);
+  // Get accelerometer data from the mpu6050 using getEvent call
+  sensors_event_t accel_data;
+  accelerometer->getEvent(&accel_data);
+
+  // Print results in CSV format: time (ms), distance (cm), arm height, z acceleration (m/s^2)
+  Serial.print(currentTime / 1e6); 
   Serial.print(" ");
   Serial.print(distance);
   Serial.print(" ");
-  Serial.println(armHeight);
+  Serial.print(armHeight);
+  Serial.print(" ");
+  Serial.println(accel_data.acceleration.z);
 }
 
 double measureDistance() {
