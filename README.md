@@ -16,4 +16,4 @@ Code for the Mass Spring Damper system designed by the UW Engineering Ideas Clin
 4. Navigate to the folder that your serial_plotter.py file is in
 5. Run 'py .\serial_plotter.py' in terminal to start the script
 6. Match the COM port to the one listed in the Arduino IDE
-7. Click start! A GUI should pop up and the graph should begin plotting
+7. Click start! A GUI should pop up and the graph should begin plotting.
