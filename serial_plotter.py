@@ -19,7 +19,7 @@ def get_com_ports():
 def start_plot(port):
     try:
         # Initialize serial connection
-        ser = serial.Serial(port, 9600)
+        ser = serial.Serial(port, 115200)
         time.sleep(2)  # Wait for the serial connection to initialize
 
         # Initialize lists to store data
