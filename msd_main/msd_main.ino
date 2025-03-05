@@ -106,5 +106,3 @@ void updateEncoder() {
     encoderPos--;
   }
 }
-
-//ajsdfkl
