@@ -21,6 +21,8 @@ int prevEncoderPos = 0;
 unsigned long currentTime;
 double armHeight = 0;
 double initDist = 0;
+double filteredDistance = 0;
+double alpha = 0.05;
 
 // Initialize Accelerometer Sensor Object
 Adafruit_MPU6050 mpu;
@@ -43,7 +45,7 @@ void setup() {
 
   initDist = measureDistance();
   // Serial communication
-  Serial.begin(9600);
+  Serial.begin(115200);
 }
 
 void loop() {
@@ -52,6 +54,7 @@ void loop() {
 
   // Measure distance using the ultrasonic sensor
   double distance = measureDistance() - initDist;
+  filteredDistance = filteredDistance*(1.0 - alpha) + alpha*distance;
 
   // Calculate arm height and update position using the rotary encoder
   calculateArmHeight();
@@ -63,7 +66,7 @@ void loop() {
   // Print results in CSV format: time (ms), distance (cm), arm height, z acceleration (m/s^2)
   Serial.print(currentTime / 1e6); 
   Serial.print(" ");
-  Serial.print(distance);
+  Serial.print(filteredDistance);
   Serial.print(" ");
   Serial.print(armHeight);
   Serial.print(" ");
