@@ -22,10 +22,18 @@ unsigned long currentTime;
 double armHeight = 0;
 double initDist = 0;
 double filteredDistance = 0;
+double filteredAccelRod = 0;
+double filteredAccelMass = 0;
 //lower alpha value means more filtering. 
-double alpha = 0.05;
-//even alpha2 value as low as 0.001 does not improve the accelerometer plot by much compared to 0.05 . 
-double alpha2 = 0.001;
+double alpha = 0.10; 
+double alpha2 = 0.07;
+
+//z-axis values from accelerometers
+struct {
+    double z_Rod;
+    double z_Mass;
+
+  } z_Values;
 
 
 void setup() {
@@ -54,7 +62,11 @@ void loop() {
   // Measure distance using the ultrasonic sensor
   double distance = measureDistance() - initDist;
   filteredDistance = filteredDistance*(1.0 - alpha) + alpha*distance; 
-  double filteredAccel = filteredAccel*(1.0 - alpha2) + alpha*(accelValue());
+
+  //update acceleration values and then filter them before plotting
+  updateAccelValue(); 
+  filteredAccelRod = filteredAccelRod*(1.0 - alpha2) + alpha2*(z_Values.z_Rod);
+  filteredAccelMass = filteredAccelMass*(1.0 - alpha2) + alpha2*(z_Values.z_Mass);
 
   // Calculate arm height and update position using the rotary encoder
   calculateArmHeight();
@@ -67,8 +79,9 @@ void loop() {
   Serial.print(" ");
   Serial.print(armHeight);
   Serial.print(" ");
-  Serial.println(filteredAccel);
-
+  Serial.print(filteredAccelRod);
+  Serial.print(" ");
+  Serial.println(filteredAccelMass);
 }
 
 double measureDistance() {
@@ -88,19 +101,20 @@ double measureDistance() {
   return distance;
 }
 
-//acceleration in m/s^2
-double accelValue(){
-  double z;
-  const int z_offset = 284; //offset and scale factor determined from manual calibration
-  const double z_scale = 0.006079027356;
+//updates acceleration (m/s^2) of accelerometer
+void updateAccelValue(){
 
-  z = analogRead(A0);
+  const int z_offset = 281; //offset and scale factor determined from manual calibration
+  const double z_scale = 0.006116207951;
+  
+  z_Values.z_Rod = analogRead(A0);
+  z_Values.z_Rod = ((double)((z_Values.z_Rod - z_offset)*z_scale) - 1.0)*9.81;
 
-  z = (double)((z - z_offset)*z_scale - 1)*9.81;
-
-  return z;
+  z_Values.z_Mass = analogRead(A1); 
+  z_Values.z_Mass = ((double)((z_Values.z_Mass - z_offset)*z_scale) + 1.0)*-9.81;
 
 }
+
 
 void calculateArmHeight() {
   noInterrupts();
