@@ -7,6 +7,7 @@
 const int trigPin = 9;
 const int echoPin = 10;
 
+
 // Rotary encoder settings
 #define CLICKS_PER_REVOLUTION 700
 #define PI 3.1415926
@@ -17,12 +18,26 @@ const int encoderB = 3;
 volatile int encoderPos = 0;
 int prevEncoderPos = 0;
 
+
 // Shared time variable
 unsigned long currentTime;
+
 double armHeight = 0;
 double initDist = 0;
 double filteredDistance = 0;
-double alpha = 0.05;
+double filteredAccelRod = 0;
+double filteredAccelMass = 0;
+//lower alpha value means more filtering. 
+double alpha = 0.10; 
+double alpha2 = 0.07;
+
+//z-axis values from accelerometers
+struct {
+    double z_Rod;
+    double z_Mass;
+
+  } z_Values;
+
 
 // Initialize Accelerometer Sensor Object
 Adafruit_MPU6050 mpu;
@@ -35,6 +50,7 @@ void setup() {
   // Setup for ultrasonic sensor
   pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin, INPUT);  // Sets the echoPin as an Input
+  
 
   // Setup for rotary encoder
   pinMode(encoderA, INPUT);
@@ -44,6 +60,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(encoderA), updateEncoder, RISING);
 
   initDist = measureDistance();
+
   // Serial communication
   Serial.begin(115200);
 }
@@ -54,7 +71,12 @@ void loop() {
 
   // Measure distance using the ultrasonic sensor
   double distance = measureDistance() - initDist;
-  filteredDistance = filteredDistance*(1.0 - alpha) + alpha*distance;
+  filteredDistance = filteredDistance*(1.0 - alpha) + alpha*distance; 
+
+  //update acceleration values and then filter them before plotting
+  updateAccelValue(); 
+  filteredAccelRod = filteredAccelRod*(1.0 - alpha2) + alpha2*(z_Values.z_Rod);
+  filteredAccelMass = filteredAccelMass*(1.0 - alpha2) + alpha2*(z_Values.z_Mass);
 
   // Calculate arm height and update position using the rotary encoder
   calculateArmHeight();
@@ -65,12 +87,18 @@ void loop() {
 
   // Print results in CSV format: time (ms), distance (cm), arm height, z acceleration (m/s^2)
   Serial.print(currentTime / 1e6); 
+
+  // Print results in CSV format: time (ms), distance (cm), arm height, acceleration
+  Serial.print(currentTime / 1e6);
   Serial.print(" ");
   Serial.print(filteredDistance);
   Serial.print(" ");
   Serial.print(armHeight);
   Serial.print(" ");
   Serial.println(accel_data.acceleration.z);
+  Serial.print(filteredAccelRod);
+  Serial.print(" ");
+  Serial.println(filteredAccelMass);
 }
 
 double measureDistance() {
@@ -90,6 +118,21 @@ double measureDistance() {
   return distance;
 }
 
+//updates acceleration (m/s^2) of accelerometer
+void updateAccelValue(){
+
+  const int z_offset = 281; //offset and scale factor determined from manual calibration
+  const double z_scale = 0.006116207951;
+  
+  z_Values.z_Rod = analogRead(A0);
+  z_Values.z_Rod = ((double)((z_Values.z_Rod - z_offset)*z_scale) - 1.0)*9.81;
+
+  z_Values.z_Mass = analogRead(A1); 
+  z_Values.z_Mass = ((double)((z_Values.z_Mass - z_offset)*z_scale) + 1.0)*-9.81;
+
+}
+
+
 void calculateArmHeight() {
   noInterrupts();
   int currentPos = encoderPos;
@@ -103,7 +146,7 @@ void calculateArmHeight() {
 }
 
 void updateEncoder() {
-  if (digitalRead(encoderB) == LOW) {
+  if (digitalRead(encoderB) == LOW) { //encoder B tells direction
     encoderPos++;
   } else {
     encoderPos--;
