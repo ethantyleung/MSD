@@ -5,8 +5,8 @@
 #include <Wire.h>
 
 // Ultrasonic sensor pins
-const int TRIG_PIN = 9;
-const int ECHO_PIN = 10;
+const int TRIG_PIN = 5;
+const int ECHO_PIN = 6;
 
 // Rotary encoder settings
 #define CLICKS_PER_REVOLUTION 700
@@ -14,6 +14,11 @@ const int ECHO_PIN = 10;
 #define ARM_LENGTH 1.3 // cm
 const int ENCODER_A = 2;
 const int ENCODER_B = 3; 
+
+//pins for Adafruit DRV8871 motor driver inputs
+const int MOTOR_DRIVER_IN1 = 9;
+const int MOTOR_DRIVER_IN2 = 10;
+
 volatile int encoderPos = 0;
 int prevEncoderPos = 0;
 
@@ -52,6 +57,10 @@ double prevRodAccel = 0;
 int numRepeats = 0;
 
 void setup() {
+  //setup for motor driver
+  pinMode(MOTOR_DRIVER_IN1, OUTPUT);
+  pinMode(MOTOR_DRIVER_IN2, OUTPUT);
+
   // Serial communication
   Serial.begin(115200);
 
@@ -90,6 +99,9 @@ void loop() {
   // Update time
   currentTime = micros();
 
+  //update motor speed from potentiometer
+  motorSpeedControl();
+
   // Measure distance using the ultrasonic sensor
   double distance = measureDistance() - initDist;
   filteredDist = filteredDist*(1.0 - ultrasonicAlpha) + ultrasonicAlpha*distance; 
@@ -102,6 +114,7 @@ void loop() {
   massAccelerometer->getEvent(&massAccelData);
   delay(10);
   rodAccelerometer->getEvent(&rodAccelData);
+
 
   // Parse the accelerometer data
   double massAccel = parseAccelData(massAccelData);
@@ -136,6 +149,7 @@ void loop() {
   Serial.print(filteredMassAccel);
   Serial.print(" ");
   Serial.println(filteredRodAccel);
+
 }
 
 /*! @brief Ping the ultrasonic sensor to collect distance data
@@ -184,6 +198,7 @@ void updateEncoder() {
   }
 }
 
+
 /*! @brief Converts raw accelerometer data to acceleration
     @returns Acceleration in m/s^2 */
 double parseAccelData(sensors_event_t sensorData) {
@@ -202,4 +217,21 @@ double parseAccelData(sensors_event_t sensorData) {
     accelData--;
   }
   return accelData * 9.81; // Scale by 9.81 m/s^2
+}
+
+void motorSpeedControl(){
+  
+  //read value from potentiometer 
+  int rawPotValue = analogRead(A2);
+ 
+  //map potentiometer value to PWM range
+   
+  //when testing the mapping function by printing the mapped values, output range is 0-250. Tweak input range to fix.  
+  int PWM_PotValue = map(rawPotValue, 0, 715, 0, 255); //input range (0-715) is based on rawPotValue with 3V3 input to potentiometer
+
+  //Motor direction depends on whether IN1 or IN2 on the motor driver is pulled low.  
+  digitalWrite(MOTOR_DRIVER_IN2, LOW); 
+  
+  //PWM motor driver input to adjust motor speed
+  analogWrite(MOTOR_DRIVER_IN1, PWM_PotValue);
 }
