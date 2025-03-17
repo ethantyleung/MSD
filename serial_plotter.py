@@ -7,8 +7,14 @@ from tkinter import ttk
 import serial.tools.list_ports
 import signal
 import sys
+from matplotlib.widgets import Button
 
 numPoints = 100  # Number of data points to display
+
+show_distance =True
+show_armHeight = True
+show_accelValueRod = True
+show_accelValueMass = True
 
 # Function to get available COM ports
 def get_com_ports():
@@ -35,11 +41,31 @@ def start_plot(port):
         # Create figure and axis
         fig, ax = plt.subplots()
         line_distance, = ax.plot([], [], 'r-', label='Output Displacement')  # Initialize an empty line plot for distance with red color
-        line_armHeight, = ax.plot([], [], 'b-', label='Input Displacement')  # Initialize an empty line plot for arm height with blue color
+        line_armHeight, = ax.plot([], [], 'b-', label='Input Displacement                            ')  # Initialize an empty line plot for arm height with blue color
         line_accelValueRod, = ax.plot([], [], 'g-', label='Rod Acceleration')  # Initialize an empty line plot for acceleration with green color
         line_accelValueMass, = ax.plot([], [], 'y-', label='Mass Acceleration')  # Initialize an empty line plot for acceleration with yellow color
         # Add legend
-        ax.legend()
+        ax.legend(loc='lower left')
+
+        def toggle_show_distance(event):
+            global show_distance
+            show_distance = not show_distance
+            line_distance.set_visible(show_distance)
+        
+        def toggle_show_armHeight(event):
+            global show_armHeight
+            show_armHeight = not show_armHeight
+            line_armHeight.set_visible(show_armHeight)
+        
+        def toggle_show_accelValueRod(event):
+            global show_accelValueRod
+            show_accelValueRod = not show_accelValueRod
+            line_accelValueRod.set_visible(show_accelValueRod)
+        
+        def toggle_show_accelValueMass(event):
+            global show_accelValueMass
+            show_accelValueMass = not show_accelValueMass
+            line_accelValueMass.set_visible(show_accelValueMass)
 
         # Function to handle keyboard interrupt
         def signal_handler(sig, frame):
@@ -91,7 +117,7 @@ def start_plot(port):
                             ax.autoscale_view()  # Autoscale the view
                     except ValueError:
                         print("Error processing data")  # Debugging statement
-            except serial.SerialException:
+            except serial.SerialException:  
                 print("Serial connection lost. Attempting to reconnect...")
                 ser.close()
                 time.sleep(2)
@@ -111,6 +137,24 @@ def start_plot(port):
         plt.xlabel('Time (s)')
         plt.ylabel('Value')
         plt.title('Live Plot of Distance and Arm Height and Acceleration')
+
+        # Defining buttons and adding their functionality
+        distance_axes = fig.add_axes([0.275,0.205,0.06,0.023])
+        bred = Button(distance_axes, 'Show/Hide',color="red")
+        bred.on_clicked(toggle_show_distance)
+
+        armHeight_axes = fig.add_axes([0.275,0.1775,0.06,0.023])
+        bblue = Button(armHeight_axes, 'Show/Hide',color="lightsteelblue")
+        bblue.on_clicked(toggle_show_armHeight)
+
+        accelValueMass_axes = fig.add_axes([0.275,0.125,0.06,0.023])
+        bgreen = Button(accelValueMass_axes, 'Show/Hide',color="yellow")
+        bgreen.on_clicked(toggle_show_accelValueMass)
+
+        accelValueRod_axes = fig.add_axes([0.275,0.151,0.06,0.023])
+        byellow = Button(accelValueRod_axes, 'Show/Hide',color="mediumseagreen")
+        byellow.on_clicked(toggle_show_accelValueRod)
+
         plt.show()
 
         # Close the serial connection when the plot window is closed

@@ -115,7 +115,6 @@ void loop() {
   delay(10);
   rodAccelerometer->getEvent(&rodAccelData);
 
-
   // Parse the accelerometer data
   double massAccel = parseAccelData(massAccelData);
   double rodAccel = parseAccelData(rodAccelData);
@@ -149,7 +148,6 @@ void loop() {
   Serial.print(filteredMassAccel);
   Serial.print(" ");
   Serial.println(filteredRodAccel);
-
 }
 
 /*! @brief Ping the ultrasonic sensor to collect distance data
@@ -220,18 +218,15 @@ double parseAccelData(sensors_event_t sensorData) {
 }
 
 void motorSpeedControl(){
-  
-  //read value from potentiometer 
+  // Read value from potentiometer 
   int rawPotValue = analogRead(A2);
  
-  //map potentiometer value to PWM range
-   
-  //when testing the mapping function by printing the mapped values, output range is 0-250. Tweak input range to fix.  
-  int PWM_PotValue = map(rawPotValue, 0, 715, 0, 255); //input range (0-715) is based on rawPotValue with 3V3 input to potentiometer
+  // Map potentiometer value to PWM range 
+  int PWM_PotValue = map(rawPotValue, 0, 715, 0, 255); // input range (0-715) is based on rawPotValue with 3V3 input to potentiometer
 
-  //Motor direction depends on whether IN1 or IN2 on the motor driver is pulled low.  
+  // Motor direction depends on whether IN1 or IN2 on the motor driver is pulled low.  
   digitalWrite(MOTOR_DRIVER_IN2, LOW); 
   
-  //PWM motor driver input to adjust motor speed
+  // PWM motor driver input to adjust motor speed
   analogWrite(MOTOR_DRIVER_IN1, PWM_PotValue);
 }
