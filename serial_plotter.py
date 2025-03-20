@@ -21,6 +21,21 @@ def get_com_ports():
     ports = serial.tools.list_ports.comports()
     return [port.device for port in ports]
 
+# Get the renderer to parse the legend box coordinate
+def find_renderer(fig):
+    if hasattr(fig.canvas, "get_renderer"):
+        # Some backends, such as TkAgg, have the get_renderer method, which 
+        # makes this easy.
+        renderer = fig.canvas.get_renderer()
+    else:
+        # Other backends do not have the get_renderer method, so we have a work 
+        # around to find the renderer.  Print the figure to a temporary file 
+        # object, and then grab the renderer that was used.
+        import io
+        fig.canvas.print_pdf(io.BytesIO())
+        renderer = fig._cachedRenderer
+    return(renderer)
+
 # Function to start the plot
 def start_plot(port):
     try:
@@ -39,13 +54,20 @@ def start_plot(port):
         prev_distance = None
 
         # Create figure and axis
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(13,6))
         line_distance, = ax.plot([], [], 'r-', label='Output Displacement')  # Initialize an empty line plot for distance with red color
-        line_armHeight, = ax.plot([], [], 'b-', label='Input Displacement                            ')  # Initialize an empty line plot for arm height with blue color
+        line_armHeight, = ax.plot([], [], 'b-', label='Input Displacement')  # Initialize an empty line plot for arm height with blue color
         line_accelValueRod, = ax.plot([], [], 'g-', label='Rod Acceleration')  # Initialize an empty line plot for acceleration with green color
         line_accelValueMass, = ax.plot([], [], 'y-', label='Mass Acceleration')  # Initialize an empty line plot for acceleration with yellow color
         # Add legend
-        ax.legend(loc='lower left')
+        legend = ax.legend(loc='lower left')
+
+        # Fetch legend coordinates to align buttons
+        fig.canvas.draw()
+        renderer = find_renderer(fig)
+        bbox = legend.get_window_extent(renderer)
+        bbox_in_fig_coords = bbox.transformed(ax.transAxes.inverted())
+        button_x_coord = bbox_in_fig_coords.x0
 
         def toggle_show_distance(event):
             global show_distance
@@ -139,22 +161,27 @@ def start_plot(port):
         plt.title('Live Plot of Distance and Arm Height and Acceleration')
 
         # Defining buttons and adding their functionality
-        distance_axes = fig.add_axes([0.275,0.205,0.06,0.023])
+        # Red Button (Distance)
+        distance_axes = fig.add_axes([button_x_coord,0.205,0.06,0.023])
         bred = Button(distance_axes, 'Show/Hide',color="red")
         bred.on_clicked(toggle_show_distance)
-
-        armHeight_axes = fig.add_axes([0.275,0.1775,0.06,0.023])
+        # Blue Button (Arm Height)
+        armHeight_axes = fig.add_axes([button_x_coord,0.1775,0.06,0.023])
         bblue = Button(armHeight_axes, 'Show/Hide',color="lightsteelblue")
         bblue.on_clicked(toggle_show_armHeight)
-
-        accelValueMass_axes = fig.add_axes([0.275,0.125,0.06,0.023])
-        bgreen = Button(accelValueMass_axes, 'Show/Hide',color="yellow")
-        bgreen.on_clicked(toggle_show_accelValueMass)
-
-        accelValueRod_axes = fig.add_axes([0.275,0.151,0.06,0.023])
+        # Yellow Button (Rod Z-Acceleration)
+        accelValueRod_axes = fig.add_axes([button_x_coord,0.151,0.06,0.023])
         byellow = Button(accelValueRod_axes, 'Show/Hide',color="mediumseagreen")
         byellow.on_clicked(toggle_show_accelValueRod)
-
+        # Green Button (Mass Z-Acceleration)
+        accelValueMass_axes = fig.add_axes([button_x_coord,0.125,0.06,0.023])
+        bgreen = Button(accelValueMass_axes, 'Show/Hide',color="yellow")
+        bgreen.on_clicked(toggle_show_accelValueMass)
+        
+        # Switch to the TkAgg backend & Set the default window size to MAX
+        plt.switch_backend('TkAgg')
+        mng = plt.get_current_fig_manager()
+        mng.window.state('zoomed')
         plt.show()
 
         # Close the serial connection when the plot window is closed
