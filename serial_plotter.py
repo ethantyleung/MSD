@@ -162,19 +162,19 @@ def start_plot(port):
 
         # Defining buttons and adding their functionality
         # Red Button (Distance)
-        distance_axes = fig.add_axes([button_x_coord,0.205,0.06,0.023])
+        distance_axes = fig.add_axes([button_x_coord,0.205,0.065,0.023])
         bred = Button(distance_axes, 'Show/Hide',color="red")
         bred.on_clicked(toggle_show_distance)
         # Blue Button (Arm Height)
-        armHeight_axes = fig.add_axes([button_x_coord,0.1775,0.06,0.023])
+        armHeight_axes = fig.add_axes([button_x_coord,0.1775,0.065,0.023])
         bblue = Button(armHeight_axes, 'Show/Hide',color="lightsteelblue")
         bblue.on_clicked(toggle_show_armHeight)
         # Yellow Button (Rod Z-Acceleration)
-        accelValueRod_axes = fig.add_axes([button_x_coord,0.151,0.06,0.023])
+        accelValueRod_axes = fig.add_axes([button_x_coord,0.151,0.065,0.023])
         byellow = Button(accelValueRod_axes, 'Show/Hide',color="mediumseagreen")
         byellow.on_clicked(toggle_show_accelValueRod)
         # Green Button (Mass Z-Acceleration)
-        accelValueMass_axes = fig.add_axes([button_x_coord,0.125,0.06,0.023])
+        accelValueMass_axes = fig.add_axes([button_x_coord,0.125,0.065,0.023])
         bgreen = Button(accelValueMass_axes, 'Show/Hide',color="yellow")
         bgreen.on_clicked(toggle_show_accelValueMass)
         
