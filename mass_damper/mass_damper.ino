@@ -5,8 +5,8 @@
 #include <Wire.h>
 
 // Ultrasonic sensor pins
-const int TRIG_PIN = 5;
-const int ECHO_PIN = 6;
+const int TRIG_PIN = 12;
+const int ECHO_PIN = 13;
 
 // Rotary encoder settings
 #define CLICKS_PER_REVOLUTION 700
@@ -15,14 +15,13 @@ const int ECHO_PIN = 6;
 const int ENCODER_A = 2;
 const int ENCODER_B = 3; 
 
-//pins for Adafruit DRV8871 motor driver inputs
-const int MOTOR_DRIVER_IN1 = 9;
+// Pins for Adafruit DRV8871 motor driver inputs
+const int MOTOR_DRIVER_IN1 = 11;
 const int MOTOR_DRIVER_IN2 = 10;
 
-volatile int encoderPos = 0;
+// Encoder Data
+volatile int encoderPos = 0; // Volatile type informs the compiler that this is a changing variable (hence the keyword volatile), so that it does not optimize it
 int prevEncoderPos = 0;
-
-// Encoder data
 double armHeight = 0;
 double initDist = 0;
 
@@ -31,8 +30,8 @@ Adafruit_MPU6050 massMPU, rodMPU;
 Adafruit_Sensor *massAccelerometer, *rodAccelerometer;
 
 // MPU6050 I2C Addresses
-const int MASS_ADDR = 0x68;
-const int ROD_ADDR = 0x69;
+const int MASS_ADDR = 0x68; // AD0 => GND
+const int ROD_ADDR = 0x69;  // AD0 => 5V
 
 // MPU6050 Calibration Data
 const double MASS_OFFSET = 0.15;
@@ -54,13 +53,11 @@ double accelAlpha = 0.10;
 
 // Error-Catching Variables
 double prevRodAccel = 0;
-int numRepeats = 0;
+double prevMassAccel = 0;
+int rodRepeats = 0;
+int massRepeats = 0;
 
 void setup() {
-  //setup for motor driver
-  pinMode(MOTOR_DRIVER_IN1, OUTPUT);
-  pinMode(MOTOR_DRIVER_IN2, OUTPUT);
-
   // Serial communication
   Serial.begin(115200);
 
@@ -72,8 +69,9 @@ void setup() {
       delay(10);
     }
   }
-  massMPU.setAccelerometerRange(MPU6050_RANGE_4_G);
-  rodMPU.setAccelerometerRange(MPU6050_RANGE_4_G);
+
+  massMPU.setAccelerometerRange(MPU6050_RANGE_4_G); // Set the accelerometer range to +- 4G (so 4*9.81m/s^2 is the max acceleration it can detect)
+  rodMPU.setAccelerometerRange(MPU6050_RANGE_4_G); 
   massAccelerometer = massMPU.getAccelerometerSensor();
   rodAccelerometer = rodMPU.getAccelerometerSensor();
 
@@ -90,7 +88,11 @@ void setup() {
   digitalWrite(ENCODER_A, HIGH);
   digitalWrite(ENCODER_B, HIGH);
   // Interrupt setup to call updateEncoder() on a rising edge from ENCODER_A pin
-  attachInterrupt(digitalPinToInterrupt(ENCODER_A), updateEncoder, RISING); 
+  attachInterrupt(digitalPinToInterrupt(ENCODER_A), updateEncoder, FALLING); 
+
+  //setup for motor driver
+  pinMode(MOTOR_DRIVER_IN1, OUTPUT);
+  pinMode(MOTOR_DRIVER_IN2, OUTPUT);
 
   initDist = measureDistance();
 }
@@ -99,14 +101,14 @@ void loop() {
   // Update time
   currentTime = micros();
 
-  //update motor speed from potentiometer
+  // Update motor speed from potentiometer
   motorSpeedControl();
 
   // Measure distance using the ultrasonic sensor
   double distance = measureDistance() - initDist;
   filteredDist = filteredDist*(1.0 - ultrasonicAlpha) + ultrasonicAlpha*distance; 
 
-  // Calculate arm height and update position using the rotary encoder
+  // // Calculate arm height and update position using the rotary encoder
   calculateArmHeight();
 
   // Get accelerometer data from the mpu6050 using getEvent call
@@ -119,35 +121,49 @@ void loop() {
   double massAccel = parseAccelData(massAccelData);
   double rodAccel = parseAccelData(rodAccelData);
 
-  // Error catching for frozen i2c bus
+  /* Error catching for frozen i2c bus
+   * Arduino has a known issue with multiple peripherals on a shared I2C line which causes one device's data to hang, or "freeze".
+   * A simple way to catch this is to increment a counter each time the rod acceleration does not change.
+   * After the data hasn't changed for 3 cycles, we restart the MPU6050 to get the sensor unstuck.*/
   if(prevRodAccel == rodAccel) {
-    numRepeats++;
+    rodRepeats++;
     // If the value has not changed in the last 3 polls, reset the frozen MPU6050
-    if(numRepeats >= 3) {
+    if(rodRepeats >= 3) {
       rodMPU.begin(ROD_ADDR,&Wire,1);
-      numRepeats = 0;
+      rodRepeats = 0;
     }
   } else {
     // Update number of repeats and previous rod acceleration value
-    numRepeats = 0;
+    rodRepeats = 0;
     prevRodAccel = rodAccel;
+  }
+  // Same error catching for mass MPU6050
+  if(prevMassAccel == massAccel) {
+    massRepeats++;
+    if(massRepeats >= 3) {
+      massMPU.begin(MASS_ADDR,&Wire,0);
+      massRepeats = 0;
+    }
+  } else {
+    massRepeats = 0;
+    prevMassAccel = massAccel;
   }
 
   // Apply accelerometer filters
   filteredMassAccel = filteredMassAccel*(1.0 - accelAlpha) + accelAlpha*(massAccel);
   filteredRodAccel = filteredRodAccel*(1.0 - accelAlpha) + accelAlpha*(rodAccel);
 
-  // Print results in CSV format:
-  // time (ms), distance (cm), arm height, mass acceleration (m/s^2), rod acceleration (m/s^2)
+  // Print results in Space-Seperated format:
+  // time (ms) distance (cm) arm height (cm) rod acceleration (m/s^2) mass acceleration (m/s^2)
   Serial.print(currentTime / 1e6);
   Serial.print(" ");
   Serial.print(filteredDist);
   Serial.print(" ");
   Serial.print(armHeight);
   Serial.print(" ");
-  Serial.print(filteredMassAccel);
+  Serial.print(filteredRodAccel);
   Serial.print(" ");
-  Serial.println(filteredRodAccel);
+  Serial.println(filteredMassAccel);
 }
 
 /*! @brief Ping the ultrasonic sensor to collect distance data
@@ -209,17 +225,13 @@ double parseAccelData(sensors_event_t sensorData) {
     accelData = (accelData - MASS_OFFSET) * MASS_SCALE;
   }
   // Offset to account for acceleration due to gravity
-  if(accelData < 0) {
-    accelData++;
-  } else {
-    accelData--;
-  }
+  accelData--;
   return accelData * 9.81; // Scale by 9.81 m/s^2
 }
 
 void motorSpeedControl(){
   // Read value from potentiometer 
-  int rawPotValue = analogRead(A2);
+  int rawPotValue = analogRead(A0);
  
   // Map potentiometer value to PWM range 
   int PWM_PotValue = map(rawPotValue, 0, 715, 0, 255); // input range (0-715) is based on rawPotValue with 3V3 input to potentiometer
