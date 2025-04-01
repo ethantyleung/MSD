@@ -13,7 +13,6 @@ const int ENCODER_B = 3;
 
 // Pins for Adafruit DRV8871 motor driver inputs
 const int MOTOR_DRIVER_IN1 = 10;
-const int MOTOR_DRIVER_IN2 = 11;
 
 // Encoder Data
 volatile int encoderPos = 0; // Volatile type informs the compiler that this is a changing variable (hence the keyword volatile), so that it does not optimize it
@@ -61,9 +60,8 @@ void setup() {
   // Interrupt setup to call updateEncoder() on a rising edge from ENCODER_A pin
   attachInterrupt(digitalPinToInterrupt(ENCODER_A), updateEncoder, RISING); 
 
-  //setup for motor driver
+  // Setup for PWM output pin
   pinMode(MOTOR_DRIVER_IN1, OUTPUT);
-  pinMode(MOTOR_DRIVER_IN2, OUTPUT);
 
   initDist = measureDistance();
 }
@@ -161,9 +159,6 @@ void motorSpeedControl(){
  
   // Map potentiometer value to PWM range 
   int PWM_PotValue = map(rawPotValue, 0, 715, 0, 255); // input range (0-715) is based on rawPotValue with 3V3 input to potentiometer
-
-  // Motor direction depends on whether IN1 or IN2 on the motor driver is pulled low.  
-  digitalWrite(MOTOR_DRIVER_IN2, LOW); 
   
   // PWM motor driver input to adjust motor speed
   analogWrite(MOTOR_DRIVER_IN1, PWM_PotValue);
