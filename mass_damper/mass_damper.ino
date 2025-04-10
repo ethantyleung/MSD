@@ -40,13 +40,10 @@ double filteredMassAccel = 0;
 double ultrasonicAlpha = 0.10; 
 double accelAlpha = 0.10;
 
-
-
 void setup() {
   // Serial communication
   Serial.begin(115200);
-  delay(5000); //Serial needs time to initialize connection
-  
+  delay(1000); //Serial needs time to initialize connection
 
   // Setup for ultrasonic sensor
   pinMode(TRIG_PIN, OUTPUT); // Sets the trigPin as an Output
@@ -86,7 +83,6 @@ void loop() {
   // Apply accelerometer filters
    filteredRodAccel = filteredRodAccel*(1.0 - accelAlpha) + accelAlpha*(z_Values.z_Rod);
    filteredMassAccel = filteredMassAccel*(1.0 - accelAlpha) + accelAlpha*(z_Values.z_Mass);
-
 
   // Print results in Space-Seperated format:
   // time (ms) distance (cm) arm height (cm) rod acceleration (m/s^2) mass acceleration (m/s^2)
@@ -148,8 +144,6 @@ void updateEncoder() {
   }
 }
 
-
-
 /*! @brief Adjusts motor speed with potentiometer knob. 
 */
 void motorSpeedControl(){
@@ -164,26 +158,17 @@ void motorSpeedControl(){
   analogWrite(MOTOR_DRIVER_IN1, PWM_PotValue);
 }
 
-
-
-
 /*! @brief Reads Z-axis analog acceleration values from two accelerometers in m/s^2
 */
  void updateAccelValue(){
- 
    const int rodAccel_offset = 279; // Offset and scale factor determined from manual calibration
    const int massAccel_offset = 284;
    const double rodAccel_scale = 0.005988023952;
    const double massAccel_scale = 0.006024096386;
    
-
-   
    z_Values.z_Rod = analogRead(A0);
-
    z_Values.z_Rod = ((double)((z_Values.z_Rod - rodAccel_offset)*rodAccel_scale) - 1.0)*9.81;
  
    z_Values.z_Mass = analogRead(A1); 
-
    z_Values.z_Mass = ((double)((z_Values.z_Mass - massAccel_offset)*massAccel_scale) - 1.0)*9.81;
- 
  }
