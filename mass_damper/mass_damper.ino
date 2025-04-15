@@ -9,24 +9,22 @@ const int ECHO_PIN = 13;
 #define PI 3.1415926
 #define ARM_LENGTH 1.3 // cm
 const int ENCODER_A = 2;
-const int ENCODER_B = 3; 
+const int ENCODER_B = 3;
 
-// Pins for Adafruit DRV8871 motor driver inputs
+// Pin for Adafruit DRV8871 motor driver inputs
 const int MOTOR_DRIVER_IN1 = 10;
 
 // Encoder Data
-volatile int encoderPos = 0; // Volatile type informs the compiler that this is a changing variable (hence the keyword volatile), so that it does not optimize it
+volatile int encoderPos = 0; // Volatile type informs the compiler that this is a changing variable so that it does not optimize it out as a constant
 int prevEncoderPos = 0;
 double armHeight = 0;
 double initDist = 0;
 
 // z-axis acceleration data from two MMA 7361 accelerometers
- struct {
-     double z_Rod;
-     double z_Mass;
- 
-   } z_Values;
-
+struct {
+  double z_Rod;
+  double z_Mass;
+} z_Values;
 
 // Shared time variable
 unsigned long currentTime;
@@ -44,11 +42,9 @@ void setup() {
   // Serial communication
   Serial.begin(115200);
   delay(1000); //Serial needs time to initialize connection
-
   // Setup for ultrasonic sensor
   pinMode(TRIG_PIN, OUTPUT); // Sets the trigPin as an Output
   pinMode(ECHO_PIN, INPUT);  // Sets the echoPin as an Input
-
   // Setup for rotary encoder
   pinMode(ENCODER_A, INPUT);
   pinMode(ENCODER_B, INPUT);
@@ -56,10 +52,9 @@ void setup() {
   digitalWrite(ENCODER_B, HIGH);
   // Interrupt setup to call updateEncoder() on a rising edge from ENCODER_A pin
   attachInterrupt(digitalPinToInterrupt(ENCODER_A), updateEncoder, RISING); 
-
   // Setup for PWM output pin
   pinMode(MOTOR_DRIVER_IN1, OUTPUT);
-
+  // Get initial distance of mass
   initDist = measureDistance();
 }
 
@@ -74,17 +69,17 @@ void loop() {
   double distance = measureDistance() - initDist;
   filteredDist = filteredDist*(1.0 - ultrasonicAlpha) + ultrasonicAlpha*distance; 
 
-  // // Calculate arm height and update position using the rotary encoder
+  // Calculate arm height and update position using the rotary encoder
   calculateArmHeight();
  
-  //  Get accelerometer data
+  // Get accelerometer data
   updateAccelValue();
 
   // Apply accelerometer filters
    filteredRodAccel = filteredRodAccel*(1.0 - accelAlpha) + accelAlpha*(z_Values.z_Rod);
    filteredMassAccel = filteredMassAccel*(1.0 - accelAlpha) + accelAlpha*(z_Values.z_Mass);
 
-  // Print results in Space-Seperated format:
+  // Print results in Space-Separated format:
   // time (ms) distance (cm) arm height (cm) rod acceleration (m/s^2) mass acceleration (m/s^2)
   Serial.print(currentTime / 1e6);
   Serial.print(" ");
@@ -95,7 +90,6 @@ void loop() {
   Serial.print(filteredRodAccel);
   Serial.print(" ");
   Serial.println(filteredMassAccel);
-  
 }
 
 /*! @brief Ping the ultrasonic sensor to collect distance data
@@ -150,7 +144,6 @@ void motorSpeedControl(){
   // Read value from potentiometer 
   int rawPotValue = analogRead(A2);
 
- 
   // Map potentiometer value to PWM range 
   int PWM_PotValue = map(rawPotValue, 0, 715, 0, 255); // input range (0-715) is based on rawPotValue with 3V3 input to potentiometer
   
@@ -166,9 +159,9 @@ void motorSpeedControl(){
    const double rodAccel_scale = 0.005988023952;
    const double massAccel_scale = 0.006024096386;
    
-   z_Values.z_Rod = analogRead(A0);
+   z_Values.z_Rod = analogRead(A1);
    z_Values.z_Rod = ((double)((z_Values.z_Rod - rodAccel_offset)*rodAccel_scale) - 1.0)*9.81;
  
-   z_Values.z_Mass = analogRead(A1); 
+   z_Values.z_Mass = analogRead(A0); 
    z_Values.z_Mass = ((double)((z_Values.z_Mass - massAccel_offset)*massAccel_scale) - 1.0)*9.81;
  }

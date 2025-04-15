@@ -1,3 +1,4 @@
+// Encoder Pins
 const int ENCODER_A = 2;
 const int ENCODER_B = 3; 
 
@@ -10,8 +11,7 @@ volatile int encoderPos = 0;
 void setup() {
   // Serial communication
   Serial.begin(115200);
-  delay(1000); //Serial needs time to initialize connection
-  // put your setup code here, to run once:
+  delay(1000); // Serial needs time to initialize connection
   // Setup for rotary encoder
   pinMode(ENCODER_A, INPUT);
   pinMode(ENCODER_B, INPUT);
@@ -19,20 +19,23 @@ void setup() {
   digitalWrite(ENCODER_B, HIGH);
   // Interrupt setup to call updateEncoder() on a rising edge from ENCODER_A pin
   attachInterrupt(digitalPinToInterrupt(ENCODER_A), updateEncoder, RISING); 
-
-  digitalWrite(7,LOW);
-  pinMode(7, INPUT);
+  // Pull pin 6 low and set it as an input pin
+  digitalWrite(6,LOW);
+  pinMode(6, INPUT);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  if(digitalRead(7)) {
+  // Check for a high signal indicating that the button has been pressed
+  if(digitalRead(6)) {
+    // Set motor output to max
     analogWrite(MOTOR_DRIVER_IN1,255);
-    while(encoderPos > -700) {
+    // Run the motor at max for one revolution (700 clicks per revolution)
+    while(encoderPos > -69) {
     }
+    // Turn the motor off after 700 clicks or one revolution
     analogWrite(MOTOR_DRIVER_IN1,0);
-    delay(500);
     encoderPos = 0;
+    delay(50);
   }
 }
 
